@@ -22,7 +22,7 @@ on:
         default: 'firefox-install.exe'
 
 jobs:
-  pull:
+  download:
     runs-on: ubuntu-22.04
     permissions:
       contents: write
