@@ -1,0 +1,58 @@
+name: my-download
+
+on:
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: 'Log level'
+        required: true
+        default: 'info'
+        type: choice
+        options:
+        - info
+        - warning
+        - debug
+      downloadUrl:
+        description: '下载地址'
+        required: true
+        default: 'https://download.mozilla.org/?product=firefox-latest-ssl&os=win64&lang=en-US&attribution_code=c291cmNlPXN1cHBvcnQubW96aWxsYS5vcmcmbWVkaXVtPXJlZmVycmFsJmNhbXBhaWduPShub3Qgc2V0KSZjb250ZW50PShub3Qgc2V0KSZleHBlcmltZW50PShub3Qgc2V0KSZ2YXJpYXRpb249KG5vdCBzZXQpJnVhPWNocm9tZSZjbGllbnRfaWRfZ2E0PShub3Qgc2V0KSZzZXNzaW9uX2lkPShub3Qgc2V0KSZkbHNvdXJjZT1meGRvdGNvbQ..&attribution_sig=e310a01158909a7c9ef26bdd1f74ec19230920c743311139d56b1078e10866f1'
+      downloadName:
+        description: '下载名称'
+        required: true
+        default: 'firefox-install.exe'
+
+jobs:
+  pull:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download
+        env:
+          XX: ''
+          DOWNLOAD_URL: ${{ github.event.inputs.downloadUrl }}
+          DOWNLOAD_NAME: ${{ github.event.inputs.downloadName }}
+        run: |
+          cd /tmp
+          mkdir download
+          cd download
+          wget -q ${DOWNLOAD_URL} -O ${DOWNLOAD_NAME}
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Tag
+        id: tag
+        env:
+          VER: ${{ github.event.inputs.ver }}
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          TAG=v${VER}-$(TZ='Asia/Singapore' date +%Y%m%d%H%M)
+          git tag -a $TAG -m "Published version $TAG" ${GITHUB_SHA}
+          git push origin $TAG
+          echo "new_tag=$TAG" >> $GITHUB_OUTPUT
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            /tmp/download/*
+          tag_name: ${{ steps.tag.outputs.new_tag }}
